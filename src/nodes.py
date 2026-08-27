@@ -805,13 +805,13 @@ def anonymize_reversible_node(state: AgentState) -> dict:
     reverse_mapping = {}
     counters = defaultdict(int)
 
-    # Sprawdź czy dane mają strukturę wielu zestawów wyników
+
     is_multi_block = (
         isinstance(data, list) and data
         and isinstance(data[0], dict) and "results" in data[0]
     )
 
-    # --- Warstwa 1: anonimizacja po nazwach kolumn ---
+
     if is_multi_block:
         masked_blocks = []
         for block in data:
@@ -837,7 +837,7 @@ def anonymize_reversible_node(state: AgentState) -> dict:
         )
         data_masked = json.dumps(masked_rows, ensure_ascii=False, indent=2)
 
-    # --- Warstwa 2: Presidio fallback — skanowanie treści JSON ---
+
     try:
         detected_lang = detect(data_masked)
     except Exception:
@@ -959,7 +959,6 @@ def gen_openui_node(state: dict) -> dict:
 
             data_context = "\n\n".join(sections)
 
-        # Case 2: zwykła lista rekordów
         elif isinstance(parsed_data, list):
             preview_rows = parsed_data[:50]
             data_context = f"""## RESULT SET 1
