@@ -18,7 +18,7 @@ from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 logger.info("")
-db_file = "DB/local_db.db"
+db_file = "DB/FLEX.db"
 MAX_LENGTH = 4000
 MAX_EDITS = 2
 
@@ -663,7 +663,7 @@ def check_correctness_sql_node(state: AgentState) -> dict:
         
 def execute_sql_query_node(state: AgentState) -> dict:
     logs = _add_log(state, "db", "Executing SQL query...")
-    db_path = "DB/local_db.db"
+    db_path = "DB/FLEX.db"
     sql_queries = state.get("SQL_queries", [])
     prompt = state.get("user_input", "")
     print(f"User prompt:\n{prompt}")
