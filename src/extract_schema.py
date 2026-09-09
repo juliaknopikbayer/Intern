@@ -87,6 +87,6 @@ def extract_schema(db_path: str, sample_limit: int = 3):
     return "\n".join(result)
 
 
-db_file = "DB/local_db.db"
+db_file = "DB/FLEX.db"
 schema_text = extract_schema(db_file)
 print(schema_text)

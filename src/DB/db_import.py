@@ -1,12 +1,14 @@
 import pandas as pd 
 import sqlite3 
 
-connection = sqlite3.connect("local_db.db")
+connection = sqlite3.connect("FLEX.db")
 
 csv_files= {
-"employees": "employees_international.csv",
-"projects": "projects.csv",
-"project_assignments":"project_assignments.csv" }
+"FLEX": "Flex-data/resources.csv"
+# "employees": "employees_international.csv",
+# "projects": "projects.csv",
+# "project_assignments":"project_assignments.csv" 
+}
 
 for tab, file in csv_files.items():
     df = pd.read_csv(file)
