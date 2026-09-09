@@ -164,9 +164,6 @@ def stream_agent(request: UserRequest):
 
             final_state = snapshot.values or {}
 
-            # ── ENRICHED "done" EVENT ────────────────────────────── #
-            # We now include all the fields needed by the frontend to
-            # offer a "Save dashboard" button without a second round-trip.
             done_payload = {
                 'type': 'done',
                 'openui_response': final_state.get('openui_response', ''),
