@@ -86,141 +86,7 @@ class ResumeRequest(BaseModel):
     
     
 
-# @app.post("/api/agent/run")
-# def run_agent(request: UserRequest):
-    # try:
-        # initial_state = {
-            # "user_input": request.message,
-            # "logs": []
-        # }
 
-        # final_state = graph.invoke(initial_state)
-
-        # return {
-            # "status": "completed",
-            # "logs": final_state.get("logs", []),
-            # "openui_response": final_state.get("openui_response", ""),
-        # }
-
-    # except Exception as e:
-        # traceback.print_exc()
-        # return {
-            # "status": "error",
-            # "logs": [],
-            # "openui_response": "",
-            # "error": str(e)
-        # }
-        
-        
-        
-# @app.get("/api/health")
-# def health():
-    # return {"status": "ok"}
-
-
-# @app.post("/api/agent/stream")
-# def stream_agent(request: UserRequest):
-    # def event_generator():
-        # thread_id = str(uuid.uuid4())
-        # config = {"configurable": {"thread_id": thread_id}}
-
-        # initial_state = {
-            # "user_input": request.message,
-            # "logs": [],
-            # "first_generation_call": True,
-            # "too_many_requests": False,
-            # "rejected": False,
-            # "is_SQL_approved": None,
-            # "is_SQL_select": None,
-            # "is_SQL_compatible": None,
-            # "retry_count_check_select": 0,
-            # "retry_count_check_correctness": 0,
-            # "retry_count_hitl": 0,
-            # "retry_count_data": 0,
-            # "retry_count_empty_output": 0,
-            # "data_conn_fail":False,
-        # }
-
-        # seen_logs = 0
-
-        # try:
-            # for chunk in graph.stream(initial_state, config=config, stream_mode="values"):
-                # logs = chunk.get("logs", [])
-                # if len(logs) > seen_logs:
-                    # for log in logs[seen_logs:]:
-                        # yield f"data: {json.dumps({'type': 'log', 'log': log})}\n\n"
-                    # seen_logs = len(logs)
-
-            # snapshot = graph.get_state(config)
-
-            # if snapshot.interrupts:
-                # intr = snapshot.interrupts[0]
-                # payload = intr.value or {}
-                # yield f"data: {json.dumps({'type': 'hitl', 'thread_id': thread_id, 'sql': payload.get('sql', ''), 'explanation': payload.get('explanation', '')})}\n\n"
-                # return
-
-            # final_state = snapshot.values or {}
-            # yield f"data: {json.dumps({'type': 'done', 'openui_response': final_state.get('openui_response', '')})}\n\n"
-
-        # except Exception as e:
-            # traceback.print_exc()
-            # yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
-
-    # return StreamingResponse(
-        # event_generator(),
-        # media_type="text/event-stream",
-        # headers={
-            # "Cache-Control": "no-cache",
-            # "Connection": "keep-alive",
-            # "X-Accel-Buffering": "no",
-        # },
-    # )
-
-
-# @app.post("/api/agent/resume")
-# def resume_agent(request: ResumeRequest):
-    # def event_generator():
-        # config = {"configurable": {"thread_id": request.thread_id}}
-
-        # try:
-            # snapshot = graph.get_state(config)
-            # seen_logs = len((snapshot.values or {}).get("logs", []))
-
-            # for chunk in graph.stream(Command(resume=request.decision), config=config, stream_mode="values"):
-                # logs = chunk.get("logs", [])
-                # if len(logs) > seen_logs:
-                    # for log in logs[seen_logs:]:
-                        # yield f"data: {json.dumps({'type': 'log', 'log': log})}\n\n"
-                    # seen_logs = len(logs)
-
-            # snapshot = graph.get_state(config)
-
-            # if snapshot.interrupts:
-                # intr = snapshot.interrupts[0]
-                # payload = intr.value or {}
-                # yield f"data: {json.dumps({'type': 'hitl', 'thread_id': request.thread_id, 'sql': payload.get('sql', ''), 'explanation': payload.get('explanation', '')})}\n\n"
-                # return
-
-            # final_state = snapshot.values or {}
-            # yield f"data: {json.dumps({'type': 'done', 'openui_response': final_state.get('openui_response', '')})}\n\n"
-
-        # except Exception as e:
-            # traceback.print_exc()
-            # yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
-
-    # return StreamingResponse(
-        # event_generator(),
-        # media_type="text/event-stream",
-        # headers={
-            # "Cache-Control": "no-cache",
-            # "Connection": "keep-alive",
-            # "X-Accel-Buffering": "no",
-        # },
-    # )
-    
-    # ================================================================== #
-#  EXISTING AGENT ENDPOINTS  (unchanged logic, enriched "done" event)
-# ================================================================== #
 
 @app.post("/api/agent/run")
 def run_agent(request: UserRequest):
@@ -383,27 +249,10 @@ def resume_agent(request: ResumeRequest):
 
 
 
-# ================================================================== #
-#  DASHBOARD CRUD ENDPOINTS
-# ================================================================== #
-#  POST   /api/dashboards              — save a new dashboard
-#  GET    /api/dashboards              — list dashboards for a user
-#  GET    /api/dashboards/{id}         — get a single dashboard (reopen)
-#  PUT    /api/dashboards/{id}         — update a dashboard
-#  DELETE /api/dashboards/{id}         — delete a dashboard
-#  GET    /api/dashboards/{id}/reopen  — get a dashboard ready for display
-# ================================================================== #
 
 
 @app.post("/api/dashboards", response_model=DashboardResponse)
 def api_save_dashboard(req: DashboardSaveRequest):
-    """
-    Save a generated dashboard for future use.
-
-    The frontend calls this after receiving the enriched ``done`` SSE event.
-    All the fields needed for persistence (OpenUI markup, SQL queries,
-    schema snapshot, masked data, PII mapping) are sent in the body.
-    """
     record = save_dashboard(
         owner_id=req.user_id,
         name=req.name,
@@ -423,12 +272,7 @@ def api_list_dashboards(
     limit: int = 50,
     offset: int = 0,
 ):
-    """
-    List all dashboards belonging to ``user_id`` (paginated, newest first).
-
-    Returns lightweight summaries (no payload fields) so the frontend can
-    render the list view efficiently.
-    """
+    
     if limit < 1 or limit > 200:
         raise HTTPException(status_code=400, detail="limit must be 1–200")
     if offset < 0:
@@ -444,12 +288,6 @@ def api_list_dashboards(
 
 @app.get("/api/dashboards/{dashboard_id}", response_model=DashboardResponse)
 def api_get_dashboard(dashboard_id: int, user_id: str):
-    """
-    Retrieve a single dashboard by id (full payload).
-
-    Permission check: only the owner (``user_id``) can retrieve it.
-    Returns 404 if the dashboard does not exist or the caller is not the owner.
-    """
     record = get_dashboard(dashboard_id, owner_id=user_id)
     if record is None:
         raise HTTPException(
@@ -461,12 +299,6 @@ def api_get_dashboard(dashboard_id: int, user_id: str):
 
 @app.put("/api/dashboards/{dashboard_id}", response_model=DashboardResponse)
 def api_update_dashboard(dashboard_id: int, req: DashboardUpdateRequest):
-    """
-    Update one or more fields of an existing dashboard.
-
-    Only the owner can update.  Only fields that are provided (not None)
-    will be changed.
-    """
     record = update_dashboard(
         dashboard_id=dashboard_id,
         owner_id=req.user_id,
@@ -487,9 +319,6 @@ def api_update_dashboard(dashboard_id: int, req: DashboardUpdateRequest):
 
 @app.delete("/api/dashboards/{dashboard_id}", response_model=DeleteDashboardResponse)
 def api_delete_dashboard(dashboard_id: int, user_id: str):
-    """
-    Delete a dashboard.  Only the owner can delete.
-    """
     deleted = delete_dashboard(dashboard_id, owner_id=user_id)
     if not deleted:
         raise HTTPException(
@@ -501,16 +330,6 @@ def api_delete_dashboard(dashboard_id: int, user_id: str):
 
 @app.get("/api/dashboards/{dashboard_id}/reopen", response_model=DashboardResponse)
 def api_reopen_dashboard(dashboard_id: int, user_id: str):
-    """
-    Reopen a previously saved dashboard.
-
-    This endpoint is functionally identical to ``GET /api/dashboards/{id}``
-    but is provided as a semantic alias for the frontend's "reopen" action.
-    The returned payload contains the full OpenUI Lang markup, the SQL
-    queries, the schema snapshot, the masked data, and the PII mapping —
-    everything needed to re-render the dashboard instantly without
-    regenerating it through the LangGraph pipeline.
-    """
     record = get_dashboard(dashboard_id, owner_id=user_id)
     if record is None:
         raise HTTPException(
