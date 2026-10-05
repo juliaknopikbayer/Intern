@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Python virtual environments
+my_env/
+.venv/
+venv/
+env/
+
+# Node.js
+node_modules/
+dist/
+.vite/
+
+# Local dashboard database
+DB/dashboards.db
+DB/dashboards.db-wal
+DB/dashboards.db-shm
+
+# Secrets
+.env
+.env.*
+
+# IDE / operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

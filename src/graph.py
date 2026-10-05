@@ -1,8 +1,8 @@
 from typing import Literal 
 from langgraph.graph import END, START, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
-from nodes import *
-from state import AgentState
+from src.nodes import *
+from src.state import AgentState
 from langgraph.checkpoint.memory import MemorySaver
 
 def route_after_validation(state:AgentState) -> Literal["next", "blocked"]:
@@ -50,7 +50,6 @@ def route_after_DB_connection(state: AgentState) -> Literal["end", "again", "nex
             "disk i/o error",
             "permission denied",
             "access denied",
-            "malformed database",
             "file is not a database",
             "readonly database",
             "out of memory",
@@ -68,6 +67,7 @@ def route_after_DB_connection(state: AgentState) -> Literal["end", "again", "nex
             "syntax error",
             "datatype mismatch",
             "type mismatch",
+            "malformed database",
             "misuse of aggregate",
             "wrong number of arguments",
             "no such function",

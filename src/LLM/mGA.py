@@ -1,5 +1,5 @@
 from openai import OpenAI
-from config import * 
+from src.LLM.config import * 
 import os
 import httpx
 import urllib3
@@ -23,26 +23,29 @@ BASE_URL_IP = "https://63.186.26.61/api/v2"                              # or gp
 def chat(prompt: str, system: str = "You are a helpful assistant.") -> str:
     url = f"{BASE_URL_IP}/chat/completions"
     
-    response = requests.post(
-        url,
-        headers={
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-            "Host": "chat.int.bayer.com"  
-        },
-        json={
-            "model": MODEL_NAME,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user",   "content": prompt},
-            ],
-            "temperature": 0.0,
-        },
-        timeout=60,
-        verify=False,  
-    )
-    response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"]
+    try:
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json",
+                "Host": "chat.int.bayer.com"  
+            },
+            json={
+                "model": MODEL_NAME,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": prompt},
+                ],
+                "temperature": 0.0,
+            },
+            timeout=60,
+            verify=False,  
+        )
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+    except Exception as e: 
+        print("Błąd, musimy jeszcze raz")
 
 # # --- Basic chat completion ---
 # def chat(prompt: str, system: str = "You are a helpful assistant.") -> str:

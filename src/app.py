@@ -1,5 +1,5 @@
-from graph import *
-from fastapi import FastAPI 
+from src.graph import *
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
@@ -43,7 +43,7 @@ import uuid
     # run_app("List and describe 5 projects that are the cheapest")
     
     
-from dashboard_store import (
+from src.dashboard_store import (
     init_db,
     save_dashboard,
     get_dashboard,
@@ -51,7 +51,7 @@ from dashboard_store import (
     update_dashboard,
     delete_dashboard,
 )
-from dashboard_models import (
+from src.dashboard_models import (
     DashboardSaveRequest,
     DashboardUpdateRequest,
     DashboardListItem,
@@ -259,6 +259,8 @@ def api_save_dashboard(req: DashboardSaveRequest):
         masked_data=req.masked_data,
         pii_mapping=req.pii_mapping,
         openui_response=req.openui_response,
+        layout_nodes=req.layout_nodes,
+
     )
     return record
 
@@ -305,6 +307,7 @@ def api_update_dashboard(dashboard_id: int, req: DashboardUpdateRequest):
         schema_text=req.schema_text,
         masked_data=req.masked_data,
         pii_mapping=req.pii_mapping,
+        layout_nodes=req.layout_nodes,
     )
     if record is None:
         raise HTTPException(

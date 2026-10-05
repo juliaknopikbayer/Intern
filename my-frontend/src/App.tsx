@@ -587,7 +587,7 @@
   // );
 // }
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { OpenUIRenderer } from "./OpenUIRenderer";
@@ -620,10 +620,15 @@ export default function App() {
 	removeSavedDashboard,
 	savedDashboardsLoading,
 	isSaving,
+  dashboardLayout,
+  hasPersistedLayout,
+  updateDashboardLayout,
 
   } = useAgent();
 
   const pdfRef = useRef<HTMLDivElement>(null);
+  const [isEditMode, setIsEditMode] = useState(true);
+
 
   
   const findSafeCut = (canvasHeight, startY, idealHeight, cutPoints, keepTogetherBlocks = []) => {
@@ -1094,6 +1099,29 @@ export default function App() {
               justifyContent: "flex-end",
             }}
           >
+		    <button
+			  onClick={() => setIsEditMode((current) => !current)}
+			  disabled={!openuiResponse}
+			  style={{
+				border: "1px solid #bfdbfe",
+				borderRadius: 14,
+				background: isEditMode
+				  ? "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)"
+				  : "#eff6ff",
+				color: isEditMode ? "white" : "#2563eb",
+				padding: "12px 16px",
+				fontSize: 14,
+				fontWeight: 700,
+				cursor: openuiResponse ? "pointer" : "not-allowed",
+				opacity: openuiResponse ? 1 : 0.65,
+				boxShadow: isEditMode
+				  ? "0 10px 20px rgba(37, 99, 235, 0.20)"
+				  : "none",
+			  }}
+			>
+			  {isEditMode ? "Edit: On" : "Edit: Off"}
+			</button>
+
 			<button
 			  onClick={saveCurrentDashboard}
 			  disabled={!generatedDashboard || isSaving}
@@ -1181,7 +1209,20 @@ export default function App() {
               {error}
             </div>
           ) : openuiResponse ? (
-            <OpenUIRenderer response={openuiResponse} />
+            <OpenUIRenderer
+              response={openuiResponse}
+              editable={isEditMode}
+              dashboardKey={
+                selectedDashboardId !== null
+                  ? `saved-${selectedDashboardId}`
+                  : `generated-${openuiResponse}`
+              }
+              savedLayout={dashboardLayout}
+              hasPersistedLayout={hasPersistedLayout}
+              onLayoutChange={updateDashboardLayout}
+            />
+
+
           ) : (
             <div
               style={{

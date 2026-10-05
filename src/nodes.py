@@ -1,24 +1,28 @@
-from state import AgentState
+from src.state import AgentState
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 import os
 import logging
-from LLM.mGA import *
-from extract_schema import *
+from src.LLM.mGA import *
+from src.extract_schema import *
 from langgraph.types import interrupt
 import sqlite3
 import re
-from pii_config import analyzer
+from src.pii_config import analyzer
 from collections import defaultdict
 from langdetect import detect
 import json
 from datetime import datetime
-from gen_UI_components import *
+from src.gen_UI_components import *
 from langchain_core.output_parsers import PydanticOutputParser
 from typing import Any, Dict
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 logger.info("")
-db_file = "DB/FLEX.db"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DB_DIR = PROJECT_ROOT / "DB"
+
+db_file = DB_DIR / "FLEX.db"
 MAX_LENGTH = 4000
 MAX_EDITS = 2
 
@@ -663,7 +667,12 @@ def check_correctness_sql_node(state: AgentState) -> dict:
         
 def execute_sql_query_node(state: AgentState) -> dict:
     logs = _add_log(state, "db", "Executing SQL query...")
-    db_path = "DB/FLEX.db"
+    db_path = DB_DIR / "FLEX.db"
+    if not db_path.exists():
+        raise FileNotFoundError(
+            f"DB not found: {db_path}"
+        )
+
     sql_queries = state.get("SQL_queries", [])
     prompt = state.get("user_input", "")
     print(f"User prompt:\n{prompt}")
@@ -721,7 +730,18 @@ def execute_sql_query_node(state: AgentState) -> dict:
         }
 
     except Exception as e:
-        logs = _add_log({"logs": logs}, "db", f"Database error: {e}", "error")
+        logger.exception("Database SQL execution failed")
+        failed_query = (
+            cleaned_query
+            if "cleaned_query" in locals()
+            else "Unknown query"
+        )
+        logs = _add_log(
+            {"logs": logs},
+            "db",
+            f"Database error: {e}. SQL: {failed_query}",
+            "error",
+        )
         return {
             "query_result": None,
             "error_message": str(e),
