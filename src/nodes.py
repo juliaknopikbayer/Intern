@@ -1,8 +1,10 @@
 from src.state import AgentState
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 import os
+from dotenv import load_dotenv
 import logging
 from src.LLM.mGA import *
+from src.LLM.config import *
 from src.extract_schema import *
 from langgraph.types import interrupt
 import sqlite3
@@ -16,13 +18,20 @@ from src.gen_UI_components import *
 from langchain_core.output_parsers import PydanticOutputParser
 from typing import Any, Dict
 from pathlib import Path
+from decimal import Decimal
+from datetime import datetime, date
+
 
 logger = logging.getLogger(__name__)
 logger.info("")
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_DIR = PROJECT_ROOT / "DB"
 
-db_file = DB_DIR / "FLEX.db"
+load_dotenv()
+
+#PROJECT_ROOT = Path(__file__).resolve().parent.parent
+#DB_DIR = PROJECT_ROOT / "DB"
+#db_file = DB_DIR / "FLEX.db"
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 MAX_LENGTH = 4000
 MAX_EDITS = 2
 
@@ -38,7 +47,8 @@ def _add_log(state: dict, step: str, message: str, level: str = "info") -> list:
 
 def generate_schema_node(state: AgentState) -> dict:
     logs = _add_log(state, "schema", "Downloading the database schema...")
-    schema_text = extract_schema(db_file)
+    database_url = os.getenv("DATABASE_URL")
+    schema_text = extract_schema(database_url)
     logs = _add_log({"logs": logs}, "schema", "Database schema downloaded", "success")
     return {"schema": schema_text, "logs": logs}
 
@@ -665,7 +675,7 @@ def check_correctness_sql_node(state: AgentState) -> dict:
         # "logs": logs,
     # }
         
-def execute_sql_query_node(state: AgentState) -> dict:
+""" def execute_sql_query_node(state: AgentState) -> dict:
     logs = _add_log(state, "db", "Executing SQL query...")
     db_path = DB_DIR / "FLEX.db"
     if not db_path.exists():
@@ -749,7 +759,200 @@ def execute_sql_query_node(state: AgentState) -> dict:
             "data_conn_fail": True,
             "logs": logs,
         }
+ """
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+""" def execute_sql_query_node(state: AgentState) -> dict:
+    logs = _add_log(state, "db", "Executing SQL query on PostgreSQL (Flex)...")
+    
+    database_url = DATABASE_URL
+    if not database_url:
+        logs = _add_log({"logs": logs}, "db", "DATABASE_URL is not set", "error")
+        return {
+            "query_result": None,
+            "error_message": "DATABASE_URL is missing in environment variables.",
+            "empty_output": False,
+            "data_conn_fail": True,
+            "logs": logs,
+        }
+
+    sql_queries = state.get("SQL_queries", [])
+    prompt = state.get("user_input", "")
+    
+    if not sql_queries:
+        logs = _add_log({"logs": logs}, "db", "No SQL queries found", "error")
+        return {
+            "query_result": None,
+            "error_message": "No SQL queries found",
+            "empty_output": False,
+            "data_conn_fail": True,
+            "logs": logs,
+        }
+
+    try:
+        all_results = []
+
+        # Połączenie z bazą PostgreSQL (używając connection stringa z .env)
+        with psycopg2.connect(database_url, cursor_factory=RealDictCursor) as conn:
+            with conn.cursor() as cursor:
+                for query in sql_queries:
+                    cleaned_query = re.sub(r"^```(?:json|sql)?\\s*|\\s*```\$", "", str(query).strip(), flags=re.IGNORECASE)
+                    print(f"User query: {cleaned_query}")
+                    
+                    cursor.execute(cleaned_query)
+                    
+                    # Pobieranie wyników jako słowniki (dzięki RealDictCursor)
+                    rows = cursor.fetchall()
+                    results = [dict(row) for row in rows]
+
+                    all_results.append({
+                        "query": cleaned_query,
+                        "results": results
+                    })
+                    
+                    print(f"\n\n\nZapytanie: {query} \nWynik na bazie PostgreSQL: {results}")
+
+        is_empty = all(len(item["results"]) == 0 for item in all_results)
+        count = state.get("retry_count_empty_output", 0) if is_empty else 0
+        total_records = sum(len(item["results"]) for item in all_results)
+
+        logs = _add_log({"logs": logs}, "db", f"Downloaded {total_records} records from PostgreSQL", "success")
+
+        return {
+            "query_result": all_results,
+            "error_message": None,
+            "empty_output": is_empty,
+            "data_conn_fail": False,
+            "retry_count_no_data_conn": 0,
+            "retry_count_empty_output": count,
+            "logs": logs,
+        }
+
+    except Exception as e:
+        logger.exception("PostgreSQL SQL execution failed")
+        failed_query = cleaned_query if "cleaned_query" in locals() else "Unknown query"
+        logs = _add_log(
+            {"logs": logs},
+            "db",
+            f"Database error: {e}. SQL: {failed_query}",
+            "error",
+        )
+        return {
+            "query_result": None,
+            "error_message": str(e),
+            "empty_output": False,
+            "data_conn_fail": True,
+            "logs": logs,
+        }
+ """
+
+import os
+from dotenv import load_dotenv
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from pathlib import Path
+
+def execute_sql_query_node(state: AgentState) -> dict:
+    logs = _add_log(state, "db", "Executing SQL query on PostgreSQL (Flex)...")
+    
+    # Pobieramy zmienną bezpośrednio w momencie wywołania węzła
+    database_url = os.getenv("DATABASE_URL")
+    print(os.getenv("DATABASE_URL"))
+    if not database_url:
+        logs = _add_log({"logs": logs}, "db", "DATABASE_URL is not set in environment variables", "error")
+        return {
+            "query_result": None,
+            "error_message": "DATABASE_URL is missing in environment variables. Check .env path.",
+            "empty_output": False,
+            "data_conn_fail": True,
+            "logs": logs,
+        }
+
+    # Usuwamy parametr ?schema=... z URI, bo psycopg2 go nie akceptuje w tej formie
+    if "?" in database_url:
+        database_url = database_url.split("?")[0]
+
+    sql_queries = state.get("SQL_queries", [])
+    prompt = state.get("user_input", "")
+    
+    if not sql_queries:
+        logs = _add_log({"logs": logs}, "db", "No SQL queries found", "error")
+        return {
+            "query_result": None,
+            "error_message": "No SQL queries found",
+            "empty_output": False,
+            "data_conn_fail": True,
+            "logs": logs,
+        }
+
+    try:
+        all_results = []
+
+# ... wewnątrz try: z połączeniem psycopg2 ...
+        with psycopg2.connect(database_url, cursor_factory=RealDictCursor) as conn:
+            with conn.cursor() as cursor:
+                for query in sql_queries:
+                    cleaned_query = re.sub(r"^```(?:json|sql)?\\s*|\\s*```\$", "", str(query).strip(), flags=re.IGNORECASE)
+                    print(f"User query: {cleaned_query}")
+                    
+                    cursor.execute(cleaned_query)
+                    
+                    rows = cursor.fetchall()
+                    
+                    # Konwersja Decimal oraz datetime na format akceptowalny przez JSON
+                    results = []
+                    for row in rows:
+                        row_dict = dict(row)
+                        for key, val in row_dict.items():
+                            if isinstance(val, Decimal):
+                                row_dict[key] = float(val)
+                            elif isinstance(val, (datetime, date)):
+                                row_dict[key] = val.isoformat()
+                        results.append(row_dict)
+
+                    all_results.append({
+                        "query": cleaned_query,
+                        "results": results
+                    })
+
+
+                    
+                    print(f"\n\nZapytanie: {query} \nWynik na bazie PostgreSQL: {results}")
+
+        is_empty = all(len(item["results"]) == 0 for item in all_results)
+        count = state.get("retry_count_empty_output", 0) if is_empty else 0
+        total_records = sum(len(item["results"]) for item in all_results)
+
+        logs = _add_log({"logs": logs}, "db", f"Downloaded {total_records} records from PostgreSQL", "success")
+
+        return {
+            "query_result": all_results,
+            "error_message": None,
+            "empty_output": is_empty,
+            "data_conn_fail": False,
+            "retry_count_no_data_conn": 0,
+            "retry_count_empty_output": count,
+            "logs": logs,
+        }
+
+    except Exception as e:
+        logger.exception("PostgreSQL SQL execution failed")
+        failed_query = cleaned_query if "cleaned_query" in locals() else "Unknown query"
+        logs = _add_log(
+            {"logs": logs},
+            "db",
+            f"Database error: {e}. SQL: {failed_query}",
+            "error",
+        )
+        return {
+            "query_result": None,
+            "error_message": str(e),
+            "empty_output": False,
+            "data_conn_fail": True,
+            "logs": logs,
+        }
 
 def error_node(state: AgentState) -> dict:
     import html
